@@ -10,7 +10,7 @@ COPY ${JAR_FILE} app.jar
 ENTRYPOINT ["java", "-jar",\
  "-Duser.timezone=Asia/Seoul",\
  "-Dspring.profiles.active=dev",\
-# "-javaagent:./pinpoint/pinpoint-bootstrap-2.5.3.jar",\
-# "-Dpinpoint.agentId=purebasket-consumer","-Dpinpoint.applicationName=purebasket-consumer",\
-# "-Dpinpoint.config=./pinpoint/pinpoint-root.config",\
+"-javaagent:./pinpoint/pinpoint-bootstrap-2.5.3.jar",\
+"-Dpinpoint.agentId=purebasket-consumer01","-Dpinpoint.applicationName=purebasket-consumer",\
+"-Dpinpoint.config=./pinpoint/pinpoint-root.config",\
  "/app.jar"]
