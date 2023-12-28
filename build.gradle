@@ -26,6 +26,10 @@ dependencies {
 
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
+
+    // email service
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.projectlombok:lombok'
