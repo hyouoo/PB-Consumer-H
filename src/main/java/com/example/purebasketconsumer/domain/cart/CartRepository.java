@@ -13,5 +13,7 @@ import java.util.List;
 @Repository
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
-    void deleteByMemberAndProductIdIn(Member member, List<Long> requestedProductsIds);
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Cart c WHERE c.member = :member AND c.product IN :productList")
+    void deleteByMemberAndProductIn(Member member, List<Product> productList);
 }

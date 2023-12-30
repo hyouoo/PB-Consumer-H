@@ -1,13 +1,14 @@
 package com.example.purebasketconsumer.domain.purchase.entity;
 
 import com.example.purebasketconsumer.domain.member.entity.Member;
-import com.example.purebasketconsumer.domain.product.entity.Product;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -18,36 +19,35 @@ public class Purchase extends TimeStamp{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Min(value = 1)
-    @Column(nullable = false)
-    private int amount;
-
-    @Column(nullable = false)
-    private int price;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @OneToMany(mappedBy="purchase", fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PurchaseDetail> purchaseDetails = new ArrayList<>();
 
+    @Column(nullable = false)
+    private int totalPrice;
 
     @Builder
-    private Purchase(int amount, int price, Member member, Product product) {
-        this.amount = amount;
-        this.price = price;
+    private Purchase(Member member, int totalPrice) {
+
         this.member = member;
-        this.product = product;
+        this.totalPrice = totalPrice;
     }
 
-    public static Purchase of(Product product, int amount, Member member) {
+    public static Purchase of(Member member, int totalPrice) {
         return Purchase.builder()
-                .amount(amount)
-                .price(product.getPrice())
                 .member(member)
-                .product(product)
+                .totalPrice(totalPrice)
                 .build();
+    }
+
+    public void addPurchaseDetails(List<PurchaseDetail> purchaseDetailList) {
+        for (PurchaseDetail purchaseDetail : purchaseDetailList) {
+            this.purchaseDetails.add(purchaseDetail);
+            purchaseDetail.addPurchase(this);
+        }
     }
 }
