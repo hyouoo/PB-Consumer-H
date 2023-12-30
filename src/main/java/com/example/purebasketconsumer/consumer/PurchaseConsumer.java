@@ -43,17 +43,17 @@ public class PurchaseConsumer {
                                  ) {
         log.info("topics: {}, partitions: {}, offsets: {}", topics, partitions, offsets);
 
-        List<PurchaseRequestDto.PurchaseDetail> purchaseDetails = data.purchaseRequestDto();
+        List<PurchaseRequestDto.PurchaseDetail> requestDetails = data.purchaseRequestDto();
         Member member = data.member();
-        List<Long> requestedProductsIds = purchaseDetails.stream().map(PurchaseRequestDto.PurchaseDetail::productId).toList();
+        List<Long> requestedProductsIds = requestDetails.stream().map(PurchaseRequestDto.PurchaseDetail::productId).toList();
         List<Product> productList = productRepository.findByIdIn(requestedProductsIds);
         List<PurchaseDetail> purchaseDetailList = new ArrayList<>();
 
-        int size = purchaseDetails.size();
+        int size = requestDetails.size();
         int totalPrice = 0;
         for (int i = 0; i < size; i++) {
             Product product = productList.get(i);
-            int amount = purchaseDetails.get(i).amount();
+            int amount = requestDetails.get(i).amount();
             int price = calculatePrice(product);
             totalPrice += price * amount;
             PurchaseDetail purchaseDetail = PurchaseDetail.from(product, price, amount);
@@ -64,8 +64,7 @@ public class PurchaseConsumer {
         purchase.addPurchaseDetails(purchaseDetailList);
 
         purchaseRepository.save(purchase);
-        cartRepository.deleteByMemberAndProductIn(member, productList);
-        log.info("회원 {}: 상품 구매 완료 - {}", member.getId(), purchaseDetails);
+        log.info("회원 {}: 상품 구매 완료 - {}", member.getId(), requestDetails);
     }
 
 
