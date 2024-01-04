@@ -29,9 +29,6 @@ public class Product {
     @Column(nullable = false)
     private int price;
 
-    @Column(nullable = false)
-    private int stock;
-
     private String info;
 
     private String category;
@@ -41,8 +38,6 @@ public class Product {
 
     private int discountRate;
 
-    private int salesCount;
-
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -51,6 +46,9 @@ public class Product {
 
     @Column(nullable = false)
     private boolean deleted;
+
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Stock stock;
 
     @BatchSize(size = 21)
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

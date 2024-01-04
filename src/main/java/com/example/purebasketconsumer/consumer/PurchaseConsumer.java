@@ -1,11 +1,14 @@
 package com.example.purebasketconsumer.consumer;
 
 import com.example.purebasketconsumer.consumer.dto.KafkaPurchaseDto;
+import com.example.purebasketconsumer.domain.cart.CartRepository;
 import com.example.purebasketconsumer.domain.member.entity.Member;
 import com.example.purebasketconsumer.domain.product.ProductRepository;
 import com.example.purebasketconsumer.domain.product.entity.Product;
-import com.example.purebasketconsumer.domain.purchase.dto.PurchaseRequestDto.PurchaseDetail;
+import com.example.purebasketconsumer.domain.purchase.PurchaseRepository;
+import com.example.purebasketconsumer.domain.purchase.dto.PurchaseRequestDto;
 import com.example.purebasketconsumer.domain.purchase.entity.Purchase;
+import com.example.purebasketconsumer.domain.purchase.entity.PurchaseDetail;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
@@ -27,7 +30,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PurchaseConsumer {
     private final ProductRepository productRepository;
-    private final JdbcTemplate jdbcTemplate;
+    private final PurchaseRepository purchaseRepository;
+    private final CartRepository cartRepository;
 
     @KafkaListener(topics = "${spring.kafka.consumer.topics.purchase}", groupId = "${spring.kafka.consumer.group-id.purchase}",
             containerFactory = "kafkaPurchaseListenerContainerFactory" ,concurrency = "3")
@@ -39,64 +43,57 @@ public class PurchaseConsumer {
                                  ) {
         log.info("topics: {}, partitions: {}, offsets: {}", topics, partitions, offsets);
 
-        List<PurchaseDetail> purchaseDetails = data.purchaseRequestDto();
+        List<PurchaseRequestDto.PurchaseDetail> requestDetails = data.purchaseRequestDto();
         Member member = data.member();
-        List<Long> requestedProductsIds = purchaseDetails.stream().map(PurchaseDetail::productId).toList();
+        List<Long> requestedProductsIds = requestDetails.stream().map(PurchaseRequestDto.PurchaseDetail::productId).toList();
         List<Product> productList = productRepository.findByIdIn(requestedProductsIds);
-        List<Purchase> purchaseList = new ArrayList<>();
+        List<PurchaseDetail> purchaseDetailList = new ArrayList<>();
 
-        int size = purchaseDetails.size();
-
+        int size = requestDetails.size();
+        int totalPrice = 0;
         for (int i = 0; i < size; i++) {
             Product product = productList.get(i);
-            int amount = purchaseDetails.get(i).amount();
-            Purchase purchase = Purchase.of(product, amount, member);
-            purchaseList.add(purchase);
+            int amount = requestDetails.get(i).amount();
+            int price = calculatePrice(product);
+            totalPrice += price * amount;
+            PurchaseDetail purchaseDetail = PurchaseDetail.from(product, price, amount);
+            purchaseDetailList.add(purchaseDetail);
         }
 
-        purchaseBatchInsert(purchaseList);
-        cartBatchDelete(member, requestedProductsIds);
-        log.info("회원 {}: 상품 구매 완료 - {}", member.getId(), purchaseDetails);
+        Purchase purchase = Purchase.of(member, totalPrice);
+        purchase.addPurchaseDetails(purchaseDetailList);
+
+        purchaseRepository.save(purchase);
+        log.info("회원 {}: 상품 구매 완료 - {}", member.getId(), requestDetails);
     }
 
-    public void purchaseBatchInsert(List<Purchase> purchaseList) {
-        String sql = "INSERT INTO purchase "
-                + "(amount, price, member_id, product_id, purchased_at) VALUE (?, ?, ?, ?, ?)";
 
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-                    @Override
-                    public void setValues(PreparedStatement ps, int i) throws SQLException {
-                        Purchase purchase = purchaseList.get(i);
-                        ps.setInt(1, purchase.getAmount());
-                        ps.setInt(2, purchase.getPrice());
-                        ps.setLong(3, purchase.getMember().getId());
-                        ps.setLong(4, purchase.getProduct().getId());
-                        ps.setTimestamp(5, java.sql.Timestamp.valueOf(java.time.LocalDateTime.now()));
-                    }
-
-                    @Override
-                    public int getBatchSize() {
-                        return purchaseList.size();
-                    }
-                }
-        );
+    private int calculatePrice(Product product) {
+        return product.getPrice() * (100 - product.getDiscountRate()) / 100;
     }
 
-    public void cartBatchDelete(Member member, List<Long> requestedProductsIds) {
-        String sql = "DELETE FROM cart WHERE member_id = ? AND product_id IN (?)";
 
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ps.setLong(1, member.getId());
-                ps.setLong(2, requestedProductsIds.get(i));
-            }
-
-            @Override
-            public int getBatchSize() {
-                return requestedProductsIds.size();
-            }
-        });
-    }
+//    public void purchaseBatchInsert(List<Purchase> purchaseList) {
+//        String sql = "INSERT INTO purchase "
+//                + "(amount, price, member_id, product_id, purchased_at) VALUE (?, ?, ?, ?, ?)";
+//
+//        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+//                    @Override
+//                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+//                        Purchase purchase = purchaseList.get(i);
+//                        ps.setInt(1, purchase.getAmount());
+//                        ps.setInt(2, purchase.getPrice());
+//                        ps.setLong(3, purchase.getMember().getId());
+//                        ps.setLong(4, purchase.getProduct().getId());
+//                        ps.setTimestamp(5, java.sql.Timestamp.valueOf(java.time.LocalDateTime.now()));
+//                    }
+//
+//                    @Override
+//                    public int getBatchSize() {
+//                        return purchaseList.size();
+//                    }
+//                }
+//        );
+//    }
 
 }
