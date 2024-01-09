@@ -3,6 +3,7 @@ package com.example.purebasketconsumer.consumer;
 
 import com.example.purebasketconsumer.consumer.dto.KafkaEventDto;
 import com.example.purebasketconsumer.domain.member.MemberRepository;
+//import com.example.purebasketconsumer.global.mail.MailSender;
 import com.example.purebasketconsumer.global.sse.EmailContents;
 import com.example.purebasketconsumer.global.sse.SseRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +24,11 @@ import java.util.Map;
 public class EventConsumer {
 
     private final MemberRepository memberRepository;
-    private final JavaMailSender javaMailSender;
+//    private final MailSender mailSender;
     private final SseRepository sseRepository;
 
-    @KafkaListener(topics = "${spring.kafka.consumer.topics.event}", groupId = "${spring.kafka.consumer.group-id.event}",
-            containerFactory = "kafkaEventListenerContainerFactory", concurrency = "1")
+    @KafkaListener(topics = "${spring.kafka.consumer.topics.event}", groupId = "mail-sender",
+            containerFactory = "kafkaEventListenerContainerFactory", concurrency = "3")
     public void sendEmailToMembers(KafkaEventDto responseDto) {
         log.info("Method called : sendEmailToMembers");
         List<String> emailList = memberRepository.findAllEmails();
@@ -40,13 +41,13 @@ public class EventConsumer {
             message.setTo(email);
             message.setSubject(subject);
             message.setText(text);
-            javaMailSender.send(message);
+//            mailSender.send(message);
         }
         log.info("메일 전송 완료");
 
     }
 
-    @KafkaListener(topics = "${spring.kafka.consumer.topics.event}", groupId = "${spring.kafka.consumer.group-id.event}",
+    @KafkaListener(topics = "${spring.kafka.consumer.topics.event}", groupId = "sse-alarm",
             containerFactory = "kafkaEventListenerContainerFactory" ,concurrency = "3")
     private void alarmNewEvent(KafkaEventDto responseDto) {
         Map<String, SseEmitter> connectionMap = sseRepository.findAllEmitters();

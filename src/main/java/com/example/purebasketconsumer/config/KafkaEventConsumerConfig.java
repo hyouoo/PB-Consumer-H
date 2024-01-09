@@ -19,15 +19,11 @@ public class KafkaEventConsumerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootStrapServers;
 
-    @Value("${spring.kafka.consumer.group-id.event}")
-    private String groupId;
-
     @Bean
     public ConsumerFactory<String, KafkaEventDto> eventConsumerFactory() {
         Map<String, Object> config = new HashMap<>();
 
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(),

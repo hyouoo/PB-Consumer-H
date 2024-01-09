@@ -31,9 +31,8 @@ import java.util.List;
 public class PurchaseConsumer {
     private final ProductRepository productRepository;
     private final PurchaseRepository purchaseRepository;
-    private final CartRepository cartRepository;
 
-    @KafkaListener(topics = "${spring.kafka.consumer.topics.purchase}", groupId = "${spring.kafka.consumer.group-id.purchase}",
+    @KafkaListener(topics = "${spring.kafka.consumer.topics.purchase}", groupId = "purchase-consumer",
             containerFactory = "kafkaPurchaseListenerContainerFactory" ,concurrency = "3")
     @Transactional
     public void purchaseProducts(@Payload KafkaPurchaseDto data,
